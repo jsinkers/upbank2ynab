@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 import json
+import logging
 import os
+import sys
 
 from dotenv import load_dotenv
 from upbankapi import Client as UpBankClient
@@ -8,6 +10,10 @@ from ynab_api import Configuration, ApiClient
 from ynab_api.api.transactions_api import TransactionsApi
 from ynab_api.model.save_transaction import SaveTransaction
 from ynab_api.model.save_transactions_wrapper import SaveTransactionsWrapper
+
+# Set up logging
+logging.basicConfig(stream=sys.stdout, level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load environment variables from .env file
 load_dotenv()
@@ -24,25 +30,28 @@ APP_STATE_FILE = 'app_state.json'
 def save_app_state(app_state):
     with open(APP_STATE_FILE, 'w') as f:
         json.dump(app_state, f)
+    logging.info("App state saved")
 
 def load_app_state():
     if not os.path.exists(APP_STATE_FILE):
-        return {}
+        logging.warning("App state file not found - using yesterday as last transaction date")
+        last_transaction_dt = datetime.now() - timedelta(days=1)
+        return {"last_transaction_dt": last_transaction_dt.isoformat()}
     with open(APP_STATE_FILE, 'r') as f:
+        logging.info("App state loaded")
         return json.load(f)
 
 def fetch_up_bank_transactions(client, since):
-    print("Fetching transactions from Up Bank")
+    logging.info(f"Fetching transactions from Up Bank since {since}")
     up_spending_account = client.account(account_id=UP_BANK_ACCOUNT_ID)
     transactions = list(up_spending_account.transactions(since=since))
-    print(transactions)
+    logging.info(f"Transactions fetched: {transactions}")
     return transactions
 
 def transform_transactions(transactions):
-    print("Transforming transactions")
+    logging.info("Transforming transactions")
     transaction_list = []
     for transaction in transactions:
-        print(f"Input: {transaction}")
         transaction_data = {
             'date': transaction.created_at,
             'amount': transaction.amount_in_base_units * 10,  # YNAB uses milliunits
@@ -51,12 +60,11 @@ def transform_transactions(transactions):
             'cleared': 'cleared' if transaction.status == 'SETTLED' else 'uncleared'
         }
         transaction_list.append(transaction_data)
-        print(f"Output: {transaction_data}")
     print("Transformation complete")
     return transaction_list
 
 def import_to_ynab(api_instance, transactions):
-    print("Importing transactions")
+    logging.info("Importing transactions to YNAB")
     ynab_transactions = []
     for transaction in transactions:
         ynab_transaction = SaveTransaction(
@@ -90,12 +98,12 @@ def main():
     app_state = load_app_state()
     # Determine last imported transaction date in YNAB
     last_transaction_dt = datetime.fromisoformat(app_state.get('last_transaction_dt'))
-    print(f"Last transaction datetime: {last_transaction_dt}")
+    logging.info(f"Last transaction datetime: {last_transaction_dt}")
 
     # Fetch and transform transactions
     transactions = fetch_up_bank_transactions(up_client, last_transaction_dt)
     if not transactions:
-        print("No new transactions to import")
+        logging.info("No new transactions to import")
     else:
         transformed_transactions = transform_transactions(transactions)
     
