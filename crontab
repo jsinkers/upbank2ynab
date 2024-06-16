@@ -1,0 +1,1 @@
+*/5 * * * * /usr/local/bin/python /app/importer.py >> /var/log/cron.log 2>&1

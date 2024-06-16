@@ -1,0 +1,3 @@
+python-dotenv
+up-bank-api
+ynab_api
