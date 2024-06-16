@@ -1,0 +1,12 @@
+services:
+  ynab-importer:
+    build: .
+    container_name: ynab-importer
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  data:
+    external: true

@@ -25,7 +25,7 @@ YNAB_API_TOKEN = os.getenv('YNAB_API_TOKEN', "")
 YNAB_BUDGET_ID = os.getenv('YNAB_BUDGET_ID', "")
 YNAB_ACCOUNT_ID = os.getenv('YNAB_ACCOUNT_ID', "")
 
-APP_STATE_FILE = 'app_state.json'
+APP_STATE_FILE = os.getenv('APP_STATE_FILE')
 
 def save_app_state(app_state):
     with open(APP_STATE_FILE, 'w') as f:
