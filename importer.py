@@ -94,18 +94,21 @@ def main():
 
     # Fetch and transform transactions
     transactions = fetch_up_bank_transactions(up_client, last_transaction_dt)
-    transformed_transactions = transform_transactions(transactions)
+    if not transactions:
+        print("No new transactions to import")
+    else:
+        transformed_transactions = transform_transactions(transactions)
     
-    # Import transactions into YNAB
-    import_to_ynab(ynab_instance, transformed_transactions)
+        # Import transactions into YNAB
+        import_to_ynab(ynab_instance, transformed_transactions)
 
-    # Save the new last transaction date
-    if transactions:
-        last_transaction_dt = max(t.created_at for t in transactions)
-        # add 1s to the last transaction date to avoid importing the same transaction again
-        last_transaction_dt += timedelta(seconds=1)
-        app_state['last_transaction_dt'] = last_transaction_dt.isoformat()
-        save_app_state(app_state)
+        # Save the new last transaction date
+        if transactions:
+            last_transaction_dt = max(t.created_at for t in transactions)
+            # add 1s to the last transaction date to avoid importing the same transaction again
+            last_transaction_dt += timedelta(seconds=1)
+            app_state['last_transaction_dt'] = last_transaction_dt.isoformat()
+            save_app_state(app_state)
 
 
 if __name__ == '__main__':
