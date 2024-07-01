@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sys
+import requests
 
 from dotenv import load_dotenv
 from upbankapi import Client as UpBankClient
@@ -26,6 +27,24 @@ YNAB_BUDGET_ID = os.getenv('YNAB_BUDGET_ID', "")
 YNAB_ACCOUNT_ID = os.getenv('YNAB_ACCOUNT_ID', "")
 
 APP_STATE_FILE = os.getenv('APP_STATE_FILE')
+
+# Healthchecks.io URL
+HEALTHCHECKS_IO_URL = os.getenv('HEALTHCHECKS_IO_URL')
+
+def notify_healthcheck(status):
+    logging.info(f"Notifying Healthchecks.io with status: {status}")
+    if HEALTHCHECKS_IO_URL:
+        try:
+            if status == 'start':
+                response = requests.get(HEALTHCHECKS_IO_URL + '/start')
+            elif status == 'success':
+                response = requests.get(HEALTHCHECKS_IO_URL)
+            elif status == 'failure':
+                response = requests.get(HEALTHCHECKS_IO_URL + '/fail')
+            response.raise_for_status()
+            logging.info(f"Healthchecks.io notification successful: {status}")
+        except Exception as e:
+            logging.error(f"Failed to notify Healthchecks.io: {e}")
 
 def save_app_state(app_state):
     with open(APP_STATE_FILE, 'w') as f:
@@ -118,6 +137,11 @@ def main():
             app_state['last_transaction_dt'] = last_transaction_dt.isoformat()
             save_app_state(app_state)
 
-
 if __name__ == '__main__':
-    main()
+    try:
+        notify_healthcheck('start')
+        main()
+        notify_healthcheck('success')
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        notify_healthcheck('failure')
